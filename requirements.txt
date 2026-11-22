@@ -1,0 +1,4 @@
+# PyAV ("av") and numpy are already installed with ComfyUI; listed here for completeness.
+av
+numpy
+soundfile

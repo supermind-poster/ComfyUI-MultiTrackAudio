@@ -1,0 +1,4 @@
+# Optional: only needed for the "Speaker Diarize -> Tracks" node.
+# NOTE: this can pull in a different torch / torchaudio. Read pip's output before confirming,
+# or install it into a copy of your environment first.
+pyannote.audio

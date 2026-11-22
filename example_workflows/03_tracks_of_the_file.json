@@ -1,0 +1,460 @@
+{
+  "id": "29c55066-7614-5dcb-9af4-29e1069226e4",
+  "revision": 0,
+  "last_node_id": 5,
+  "last_link_id": 3,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "MarkdownNote",
+      "pos": [
+        40,
+        0
+      ],
+      "size": [
+        1040,
+        260
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "# 03 · A file that already has separate tracks (mov / mka)\nWith **speakers_from = tracks of the file** nothing is analysed: the track chosen by *track_index* (usually 0, the full dialogue) becomes `timeline`, and the file's *other* tracks come out as `speaker_1`, `speaker_2`… as they are. All tracks are shown as lanes, so you see at a glance what the file contains. The sections you mark apply to every track, so they stay in step.\n\n*Channels are not tracks:* a multichannel WAV is one track. Audio with more than two channels is mixed to mono (ComfyUI's own audio nodes play such audio too slow); *multichannel = keep all channels* (advanced) leaves it as is."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 2,
+      "type": "MTA_AudioTimeline",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        680,
+        760
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "audio"
+          }
+        },
+        {
+          "name": "file_path_override",
+          "localized_name": "file_path_override",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "file_path_override"
+          }
+        },
+        {
+          "name": "track_index",
+          "localized_name": "track_index",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "track_index"
+          }
+        },
+        {
+          "name": "speakers_from",
+          "localized_name": "speakers_from",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "speakers_from"
+          }
+        },
+        {
+          "name": "num_speakers",
+          "localized_name": "num_speakers",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "num_speakers"
+          }
+        },
+        {
+          "name": "save_format",
+          "localized_name": "save_format",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "save_format"
+          }
+        },
+        {
+          "name": "save_bit_depth",
+          "localized_name": "save_bit_depth",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "save_bit_depth"
+          }
+        },
+        {
+          "name": "save_sample_rate",
+          "localized_name": "save_sample_rate",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "save_sample_rate"
+          }
+        },
+        {
+          "name": "filename_prefix",
+          "localized_name": "filename_prefix",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "filename_prefix"
+          }
+        },
+        {
+          "name": "audio_in",
+          "localized_name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        },
+        {
+          "name": "model",
+          "localized_name": "model",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "model"
+          }
+        },
+        {
+          "name": "min_speakers",
+          "localized_name": "min_speakers",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "min_speakers"
+          }
+        },
+        {
+          "name": "max_speakers",
+          "localized_name": "max_speakers",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "max_speakers"
+          }
+        },
+        {
+          "name": "exclusive",
+          "localized_name": "exclusive",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "exclusive"
+          }
+        },
+        {
+          "name": "device",
+          "localized_name": "device",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "device"
+          }
+        },
+        {
+          "name": "keep_model_loaded",
+          "localized_name": "keep_model_loaded",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "keep_model_loaded"
+          }
+        },
+        {
+          "name": "padding_ms",
+          "localized_name": "padding_ms",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "padding_ms"
+          }
+        },
+        {
+          "name": "fade_ms",
+          "localized_name": "fade_ms",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "fade_ms"
+          }
+        },
+        {
+          "name": "multichannel",
+          "localized_name": "multichannel",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "multichannel"
+          }
+        },
+        {
+          "name": "save_mono",
+          "localized_name": "save_mono",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "save_mono"
+          }
+        },
+        {
+          "name": "save_with_timeline",
+          "localized_name": "save_with_timeline",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "save_with_timeline"
+          }
+        },
+        {
+          "name": "edit",
+          "localized_name": "edit",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "edit"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "timeline",
+          "localized_name": "timeline",
+          "type": "AUDIO",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "segments",
+          "localized_name": "segments",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 1
+        },
+        {
+          "name": "saved_paths",
+          "localized_name": "saved_paths",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 2
+        },
+        {
+          "name": "speaker_1",
+          "localized_name": "speaker_1",
+          "type": "AUDIO",
+          "links": [
+            2
+          ],
+          "slot_index": 3
+        },
+        {
+          "name": "speaker_2",
+          "localized_name": "speaker_2",
+          "type": "AUDIO",
+          "links": [
+            3
+          ],
+          "slot_index": 4
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MTA_AudioTimeline"
+      },
+      "widgets_values": [
+        "multitrack.mov",
+        "",
+        0,
+        "tracks of the file",
+        0,
+        "none (preview only)",
+        "16",
+        "source (no resampling)",
+        "speakers/timeline",
+        "pyannote/speaker-diarization-community-1",
+        0,
+        0,
+        true,
+        "auto",
+        false,
+        0.0,
+        10.0,
+        "mix to mono/stereo",
+        false,
+        true,
+        ""
+      ]
+    },
+    {
+      "id": 3,
+      "type": "PreviewAudio",
+      "pos": [
+        760,
+        300
+      ],
+      "size": [
+        380,
+        90
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "AUDIO",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "AUDIO",
+          "links": null,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "title": "Timeline track"
+    },
+    {
+      "id": 4,
+      "type": "PreviewAudio",
+      "pos": [
+        760,
+        440
+      ],
+      "size": [
+        380,
+        90
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "AUDIO",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "AUDIO",
+          "links": null,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "title": "Other track 1"
+    },
+    {
+      "id": 5,
+      "type": "PreviewAudio",
+      "pos": [
+        760,
+        580
+      ],
+      "size": [
+        380,
+        90
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "AUDIO",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "localized_name": "audio",
+          "type": "AUDIO",
+          "links": null,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "title": "Other track 2"
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      3,
+      0,
+      "AUDIO"
+    ],
+    [
+      2,
+      2,
+      3,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      3,
+      2,
+      4,
+      5,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.75,
+      "offset": [
+        60,
+        40
+      ]
+    }
+  },
+  "version": 0.4
+}
