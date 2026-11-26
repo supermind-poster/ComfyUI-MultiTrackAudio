@@ -4,13 +4,55 @@
 the parts you want, find the speakers, fix them like in an editor, and get one audio output per speaker. Optionally
 save everything as a multi-track `mka`/`mov`.**
 
+![editor](editor_preview.png)
+*The full-window editor (**⤢ Open editor** on the node): re-ordering a clip, the others make room.*
+
 ![timeline](timeline_preview.png)
-*(a rendering of the timeline from the test data; the real node looks like this inside ComfyUI)*
+*The compact timeline on the node itself.*
 
 ComfyUI's built-in loaders only ever read the *first* audio stream. This node shows all tracks of a file, can use
 them as outputs, and can split a dialogue into speakers.
 
-## The timeline
+## The full-window editor (⤢ Open editor)
+
+The button at the left of the node's toolbar opens the timeline in a big window, laid out like a video editor
+(DaVinci Resolve, Premiere). It edits exactly the same data as the compact timeline, so you can switch freely, and
+Undo/Redo is shared. **Done** (or Esc) closes it; nothing needs saving, the node already has every change.
+
+| Part | What it is |
+|---|---|
+| **Source** (top) | the whole file. Parts the sequence uses carry their position number; parts you cut away are dimmed |
+| **Sequence** (main) | the output, in OUTPUT time: the clips end to end (no gaps), the file's tracks, then one lane per speaker |
+| **Inspector** (bottom) | exact In / Out / length of the selected clip (type `1:02.5` + Enter), or Start / End / speaker of a speaker clip |
+
+**Clips (the kept sections)**
+- **Re-order**: drag a clip left/right. The others make room, a dashed slot shows where it will land. Esc cancels.
+  `Alt+←/→` moves the selected clip one place, the arrow buttons do the same.
+- **Trim**: drag a clip's edge. It is a *ripple* trim: what follows moves with it. A tooltip shows the new In/Out.
+- **Give a clip to a speaker**: drag a clip *down* out of the audio lanes. Drop it on a speaker lane and that speaker gets
+  a clip with exactly the clip's range (a copy; the clip stays). Drop it below the last lane and a new speaker with a
+  default name is created with that clip.
+- **Cut**: `B` (blade tool, click the clip) or `S` (at the playhead). **Delete** removes a clip and closes the gap.
+  The sequence always keeps at least one clip; **Whole file** starts over.
+- **Bring back what you cut**: in *Source* click a dimmed part (or drag inside it) to mark a range, then **Add to end**,
+  **Insert at cut**, or drag the marked range onto the sequence; a yellow line shows where it will go.
+- Each part of the source can be used once (that keeps speaker clips unambiguous), so trimming is limited by the
+  neighbouring part of the *source*.
+
+**Speakers** (same as before, now in output time)
+- Drag in an empty part of a speaker lane to draw a clip; drag a clip's edge to trim it.
+- Drag a clip sideways to shift where that speaker talks, or onto another lane to hand it over (both at once works too).
+- **Analyze speakers**, **+ Speaker**, rename by double-clicking the name, **×** deletes a lane.
+
+**Playhead and view**
+- Click or drag in the ruler to move the playhead. `Space` plays the selected lane, `Home`/`End`, `←/→` (Shift = 1 s),
+  `↑/↓` jump to the previous/next cut.
+- Wheel = zoom at the pointer, Shift+wheel or middle-drag = scroll sideways, Alt+wheel = scroll the lanes,
+  double-click a clip = zoom to it, `Shift+Z` = fit. The strip at the bottom shows the whole sequence.
+- **Snap** (`N`) pulls cuts, clip edges and the playhead together (hold Alt while dragging to switch it off for a moment).
+- `?` or `F1` shows all shortcuts.
+
+## The compact timeline (on the node)
 
 | Row | What it is |
 |---|---|
@@ -132,14 +174,20 @@ can't leak into shared workflows (or use `HF_TOKEN` / `huggingface-cli login`).
 ```bash
 pip install numpy av soundfile pytest
 python -m pytest tests -q                   # Python: core, API helpers, node, workflows
-node --test tests/js/timeline.test.mjs      # JS: the timeline editor model (no dependencies)
+node --test tests/js/*.mjs                  # JS: the timeline model and the sequence editor (no dependencies)
 python tools/build_example_workflows.py     # regenerate example_workflows/ after changing node inputs
 ```
-`web/lib/timeline.js` is the pure editor model + renderer, `web/mta_timeline.js` the ComfyUI glue. Tests stub `torch` /
+`web/lib/timeline.js` is the pure editor model + compact renderer, `web/lib/sequence.js` / `source.js` / `peaks.js` the pure
+full-window editor (view, gestures, waveform cache), `web/lib/editor.js` its DOM window, `web/mta_timeline.js` the ComfyUI glue. Tests stub `torch` /
 `folder_paths` when ComfyUI isn't present. Never put `{"audio_upload": True}` on a file combo (it makes the frontend
 inject a widget that crashes node creation); `tests/test_node_defs.py` guards that.
 
 ## Changelog
+- **0.4.0** – **Full-window editor** (⤢ Open editor): video-editor style sequence in output time, drag to re-order with
+  live reflow, ripple trim, blade, ripple delete, snapping, source viewer to bring back cut-away parts (also by dragging),
+  inspector with exact values, speaker clips in output time (draw, trim, move, hand over), zoom/pan/overview, playhead
+  scrubbing and playback, keyboard shortcuts. The compact timeline stays. "One section covering the whole file" is stored
+  as "nothing cut". No change to the node's inputs/outputs.
 - **0.3.0** – Editing: several **sections** (mark, trim, split, delete, re-order), **editable speaker clips** (trim, draw,
   reassign, add speakers by hand), Undo/Redo. **audio_in** for a Load Audio node. **Dynamic outputs** (one per lane).
   Multi-track files (track choice, "tracks of the file") and **saving** are back, as `mka`/`mov` only, with bit depth and

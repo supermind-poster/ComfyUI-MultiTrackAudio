@@ -111,12 +111,78 @@ export class Timeline {
   trackByIndex(i) { return this.tracks.find((t) => t.index === i) || null; }
 
   // ================================================================== sections (what is kept, in output order)
+  _whole() {            // the implicit "whole file" section; the same object until the duration changes (stable identity)
+    const w = this._wholeSec;
+    if (!w || w.start !== 0 || w.end !== this.duration) this._wholeSec = { start: 0, end: this.duration };
+    return this._wholeSec;
+  }
   effSections() {
-    return this.sections.length ? this.sections : (this.duration > 0 ? [{ start: 0, end: this.duration }] : []);
+    return this.sections.length ? this.sections : (this.duration > 0 ? [this._whole()] : []);
   }
   hasSections() { return this.sections.length > 0; }
   materialize() {
-    if (!this.sections.length && this.duration > 0) this.sections = [{ start: 0, end: this.duration }];
+    if (!this.sections.length && this.duration > 0) this.sections = [this._whole()];
+  }
+  /** What is stored: one section that covers the whole file is the same as "nothing cut" (stored as no sections). */
+  canonicalSections() {
+    const s = this.sections;
+    if (s.length === 1 && this.duration > 0 && s[0].start <= 0.002 && s[0].end >= this.duration - 0.002) return [];
+    return s;
+  }
+
+  // ---- the sequence (program) in OUTPUT time: the sections laid end to end, no gaps
+  programLayout(order = null) {
+    let p = 0;
+    return (order || this.effSections()).map((sec, i) => {
+      const e = { sec, i, p0: p, p1: p + (sec.end - sec.start) };
+      p = e.p1;
+      return e;
+    });
+  }
+  /** The layout entry that contains program time p (the last one at the very end). */
+  entryAt(p, layout = this.programLayout()) {
+    for (const e of layout) if (p >= e.p0 - EPS && p < e.p1 - EPS) return e;
+    const last = layout[layout.length - 1];
+    return last && p >= last.p1 - EPS && p <= last.p1 + EPS ? last : null;
+  }
+  /** Source ranges nobody uses: what was cut away (and can be added back). */
+  freeGaps() {
+    const secs = [...this.effSections()].sort((a, b) => a.start - b.start);
+    const gaps = [];
+    let prev = 0;
+    for (const s of secs) {
+      if (s.start > prev + EPS) gaps.push({ start: prev, end: s.start });
+      prev = Math.max(prev, s.end);
+    }
+    if (this.duration > 0 && prev < this.duration - EPS) gaps.push({ start: prev, end: this.duration });
+    return gaps;
+  }
+  gapAt(t) { return this.freeGaps().find((g) => t >= g.start - EPS && t <= g.end + EPS) || null; }
+
+  /** Put a NEW part of the source into the sequence at `index` (it must lie in unused source). */
+  insertSection(a, b, index = this.sections.length) {
+    if (b < a) [a, b] = [b, a];
+    a = clamp(a, 0, this.duration);
+    b = clamp(b, 0, this.duration);
+    if (b - a < MIN_SEC) return null;
+    this.materialize();
+    for (const o of this.sections) if (a < o.end - EPS && b > o.start + EPS) return null;   // that part is already used
+    const s = { start: a, end: b };
+    this.sections.splice(clamp(index, 0, this.sections.length), 0, s);
+    return s;
+  }
+
+  /** Typed values (inspector): both edges at once, still walled in by the neighbours in the source. */
+  setSectionRange(sec, a, b) {
+    this.materialize();
+    if (!this.sections.includes(sec)) return null;
+    if (b < a) [a, b] = [b, a];
+    const [lo, hi] = this._bounds(sec);
+    a = clamp(a, lo, hi - MIN_SEC);
+    b = clamp(b, a + MIN_SEC, hi);
+    sec.start = a;
+    sec.end = b;
+    return sec;
   }
   programLength() { return this.effSections().reduce((a, s) => a + (s.end - s.start), 0); }
 
@@ -279,6 +345,19 @@ export class Timeline {
     return c;
   }
 
+  /** A clip for `speakerId` covering exactly [a, b]: what that speaker had there is overwritten (used by "copy a section to a speaker"). */
+  assignRange(speakerId, a, b) {
+    if (this.speakerIndex(speakerId) < 0) return null;
+    if (b < a) [a, b] = [b, a];
+    a = clamp(a, 0, this.duration);
+    b = clamp(b, 0, this.duration);
+    if (b - a < MIN_SEC) return null;
+    this._overwrite(speakerId, a, b, null);
+    const c = { start: a, end: b, speaker: speakerId };
+    this.clips.push(c);
+    return c;
+  }
+
   deleteClip(clip) {
     const i = this.clips.indexOf(clip);
     if (i < 0) return false;
@@ -327,6 +406,31 @@ export class Timeline {
     this.selLane = null;
   }
 
+  /** Typed values (inspector) for a speaker clip. */
+  setClipRange(clip, a, b) {
+    if (!this.clips.includes(clip)) return null;
+    if (b < a) [a, b] = [b, a];
+    const [lo, hi] = this._clipBounds(clip);
+    a = clamp(a, lo, hi - MIN_SEC);
+    b = clamp(b, a + MIN_SEC, hi);
+    clip.start = a;
+    clip.end = b;
+    return clip;
+  }
+
+  /** The parts of a speaker's clips that fall inside the sections, in program time. */
+  piecesOf(speakerId, layout = this.programLayout()) {
+    const out = [];
+    for (const c of this.clips) {
+      if (c.speaker !== speakerId) continue;
+      for (const e of layout) {
+        const a = Math.max(c.start, e.sec.start), b = Math.min(c.end, e.sec.end);
+        if (b - a > EPS) out.push({ clip: c, entry: e, a, b, p0: e.p0 + (a - e.sec.start), p1: e.p0 + (b - e.sec.start) });
+      }
+    }
+    return out.sort((x, y) => x.p0 - y.p0);
+  }
+
   clearEdit() {
     this.sections = [];
     this.speakers = [];
@@ -338,12 +442,12 @@ export class Timeline {
   toEdit() {
     return {
       v: 1,
-      sections: this.sections.map((s) => [Math.round(s.start * 1000) / 1000, Math.round(s.end * 1000) / 1000]),
+      sections: this.canonicalSections().map((s) => [Math.round(s.start * 1000) / 1000, Math.round(s.end * 1000) / 1000]),
       speakers: this.speakers.map((s) => ({ id: s.id, name: s.name })),
       clips: this.clips.map((c) => ({ start: Math.round(c.start * 1000) / 1000, end: Math.round(c.end * 1000) / 1000, speaker: c.speaker })),
     };
   }
-  isEmptyEdit() { return !this.sections.length && !this.speakers.length && !this.clips.length; }
+  isEmptyEdit() { return !this.canonicalSections().length && !this.speakers.length && !this.clips.length; }
 
   fromEdit(e) {
     this.sections = (e.sections || []).map(([a, b]) => ({ start: a, end: b }));

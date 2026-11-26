@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-multitrack-audio"
 description = "One ComfyUI node: a timeline editor for audio: sections, speaker detection and editing, one output per speaker, optional multi-track save."
-version = "0.3.0"
+version = "0.4.0"
 license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.10"

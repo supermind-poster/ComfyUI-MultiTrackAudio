@@ -2,6 +2,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { Timeline, fmtTime, parseEdit, estimateSave } from "./lib/timeline.js";
+import { Editor } from "./lib/editor.js";
 
 const NODE_TYPE = "MTA_AudioTimeline";
 const TOOLBAR_H = 96;
@@ -53,6 +54,8 @@ function setup(node) {
     b.addEventListener("click", (e) => { e.stopPropagation(); try { onClick(); } catch (err) { console.error(err); } });
     return b;
   };
+  const btnOpen = mkBtn("⤢ Open editor", "Open the timeline in a full window: re-order clips by dragging, ripple-trim, blade, snapping, exact values", () => openEditor());
+  btnOpen.style.background = "#2d6b52"; btnOpen.style.borderColor = "#3f9a74"; btnOpen.style.color = "#fff"; btnOpen.style.fontWeight = "600";
   const btnUpload = mkBtn("Upload", "Upload an audio / video file into ComfyUI/input", () => fileInput.click());
   const btnAnalyze = mkBtn("Analyze speakers", "Detect who speaks when, in the kept sections", () => analyze());
   const btnClear = mkBtn("Clear", "Remove sections, speakers and clips", () => clearAll());
@@ -64,7 +67,7 @@ function setup(node) {
   const btnDelSpk = mkBtn("− Speaker", "Delete the selected speaker lane with its clips", () => delSpeaker());
   const btnPlay = mkBtn("▶ Play", "Play the selected lane (a track, or one speaker) through the sections, from the playhead", () => togglePlay());
   const btnFit = mkBtn("Fit", "Show everything", () => { tl.fit(); scheduleDetail(); redraw(); });
-  bar.append(btnUpload, btnAnalyze, btnClear, btnUndo, btnRedo, btnSplit, btnDelete, btnAddSpk, btnDelSpk, btnPlay, btnFit);
+  bar.append(btnOpen, btnUpload, btnAnalyze, btnClear, btnUndo, btnRedo, btnSplit, btnDelete, btnAddSpk, btnDelSpk, btnPlay, btnFit);
   const lineStyle = { fontSize: "11px", color: "var(--descrip-text, #9a9a9a)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingLeft: "2px", minHeight: "14px" };
   const status = el("div", lineStyle);
   const info = el("div", lineStyle);
@@ -121,6 +124,7 @@ function setup(node) {
     status.textContent = text || "";
     status.style.color = kind === "error" ? "#ff8a80" : kind === "busy" ? "#ffd54f" : "var(--descrip-text, #9a9a9a)";
     status.title = text || "";
+    if (ed && ed.isOpen) ed.setStatus(text, kind);
   };
   const markChanged = () => { try { app.graph?.setDirtyCanvas?.(true, true); } catch (e) { /* ignore */ } };
   function fitNode() {
@@ -188,6 +192,7 @@ function setup(node) {
   }
   function afterEdit() {
     writeEdit(); syncOutputs(); updateInfo(); updateButtons(); fitNode(); redraw(); markChanged();
+    if (ed && ed.isOpen) ed.modelChanged();
   }
   function commit() {                       // call after every finished edit
     const now = editJson();
@@ -268,6 +273,7 @@ function setup(node) {
       fitNode();
       updateInfo();
       redraw();
+      if (ed && ed.isOpen) ed.sourceChanged();
       if (!connected) await Promise.all(tl.tracks.map((t) => loadCoarse(t, seq)));
     } catch (e) {
       if (seq !== st.seq) return;
@@ -282,6 +288,7 @@ function setup(node) {
       if (seq !== st.seq) return;
       track.coarse = { start: 0, end: r.duration, min: r.min, max: r.max };
       tl.setDuration(r.duration);
+      if (ed && ed.isOpen) { ed.peaks.setCoarse(track.index, track.coarse); ed.modelChanged(); }
       redraw();
     } catch (e) { track.error = String(e.message || e); redraw(); }
   }
@@ -368,8 +375,9 @@ function setup(node) {
     tl.selLane = { kind: "speaker", index: tl.speakerIndex(sp.id) };
     commit();
   }
-  function delSpeaker() {
-    const lane = tl.selLane && tl.selLane.kind === "speaker" ? tl.speakers[tl.selLane.index] : null;
+  function delSpeaker(laneArg) {
+    const l = laneArg || tl.selLane;
+    const lane = l && l.kind === "speaker" ? tl.speakers[l.index] : null;
     if (!lane) return;
     const n = tl.clipsOf(lane.id).length;
     if (n && !window.confirm(`Delete "${lane.name}" and its ${n} clip${n === 1 ? "" : "s"}?`)) return;
@@ -588,6 +596,35 @@ function setup(node) {
     e.preventDefault(); e.stopPropagation();
   });
 
+  // ------------------------------------------------------------------ the full-window editor
+  let ed = null;
+  const editorHost = {
+    tl,
+    fetchPeaks: (track, start, end, n) => getJSON("/mta/peaks", { ...srcArgs(track), start, end, n }),
+    getBuffer: (track, lo, hi) => getBuffer(track, lo, hi),
+    audioCtx: () => audioCtx(),
+    commit: () => commit(),
+    undo: () => undo(),
+    redo: () => redo(),
+    canUndo: () => st.undo.length > 0,
+    canRedo: () => st.redo.length > 0,
+    isBusy: () => st.busy,
+    analyze: () => analyze(),
+    addSpeaker: () => addSpeaker(),
+    deleteSpeaker: (lane) => delSpeaker(lane),
+    renameSpeaker: (i) => renameSpeaker(i),
+    selectLane: (lane) => selectLane(lane),
+    fileLabel: () => (inputConnected() ? "Connected audio" : (String(val("file_path_override", "")).trim() || String(val("audio", ""))).split(/[\\/]/).pop()),
+    onClose: () => { afterEdit(); redraw(); },
+  };
+  function openEditor() {
+    if (!tl.tracks.length) { setStatus(inputConnected() ? "Run the workflow once first" : "Choose an audio file first", "error"); return; }
+    stopPlay();
+    if (!ed) ed = new Editor(editorHost);
+    ed.open();
+  }
+  node.mtaOpenEditor = openEditor;       // handle for tests / debugging
+
   // ------------------------------------------------------------------ node hooks
   hook("audio", () => { resetEdit(); refresh(true); });
   hook("file_path_override", () => { clearTimeout(st.timers.path); st.timers.path = setTimeout(() => { resetEdit(); refresh(true); }, 400); });
@@ -639,6 +676,7 @@ function setup(node) {
   const prevRemoved = node.onRemoved;
   node.onRemoved = function () {
     stopPlay();
+    if (ed && ed.isOpen) ed.close();
     if (ro) ro.disconnect();
     Object.values(st.timers).forEach((t) => { clearTimeout(t); clearInterval(t); });
     try { st.audioCtx && st.audioCtx.close(); } catch (e) { /* ignore */ }
